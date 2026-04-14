@@ -9,6 +9,7 @@ import torch.nn as nn
 from mmcv.runner import auto_fp16
 from mmdet.models import DETECTORS
 from mmdet3d.core import bbox3d2result
+from mmdet3d.core.bbox import LiDARInstance3DBoxes
 from mmdet3d.core.bbox.coders import build_bbox_coder
 from mmdet3d.models.detectors.mvx_two_stage import MVXTwoStageDetector
 from projects.mmdet3d_plugin.models.utils.grid_mask import GridMask
@@ -782,7 +783,7 @@ class UniADTrack(MVXTwoStageDetector):
         bboxes_dict = self.bbox_coder.decode(bbox_dict, with_mask=with_mask, img_metas=img_metas)[0]
         bboxes = bboxes_dict["bboxes"]
         # bboxes[:, 2] = bboxes[:, 2] - bboxes[:, 5] * 0.5
-        bboxes = img_metas[0]["box_type_3d"](bboxes, 9)
+        bboxes = LiDARInstance3DBoxes(bboxes, 9)
         labels = bboxes_dict["labels"]
         scores = bboxes_dict["scores"]
         bbox_index = bboxes_dict["bbox_index"]
@@ -828,7 +829,7 @@ class UniADTrack(MVXTwoStageDetector):
         )
         bboxes_dict = self.bbox_coder.decode(bbox_dict, img_metas=img_metas)[0]
         bboxes = bboxes_dict["bboxes"]
-        bboxes = img_metas[0]["box_type_3d"](bboxes, 9)
+        bboxes = LiDARInstance3DBoxes(bboxes, 9)
         labels = bboxes_dict["labels"]
         scores = bboxes_dict["scores"]
 

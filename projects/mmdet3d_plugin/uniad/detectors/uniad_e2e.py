@@ -297,23 +297,28 @@ class UniAD(UniADTrack):
         bev_embed = result_track[0]["bev_embed"]
 
         if self.with_seg_head:
-            result_seg =  self.seg_head.forward_test(bev_embed, gt_lane_labels, gt_lane_masks, img_metas, rescale)
+            result_seg = self.seg_head.forward_test(bev_embed, img_metas=img_metas, rescale=rescale)
 
         if self.with_motion_head:
             result_motion, outs_motion = self.motion_head.forward_test(bev_embed, outs_track=result_track[0], outs_seg=result_seg[0])
             outs_motion['bev_pos'] = result_track[0]['bev_pos']
 
-        outs_occ = dict()
+        outs_occ = dict(seg_out=None)
         if self.with_occ_head:
             occ_no_query = outs_motion['track_query'].shape[1] == 0
-            outs_occ = self.occ_head.forward_test(
-                bev_embed, 
-                outs_motion,
-                no_query = occ_no_query,
-                gt_segmentation=gt_segmentation,
-                gt_instance=gt_instance,
-                gt_img_is_valid=gt_occ_img_is_valid,
-            )
+            if (
+                    gt_segmentation is not None and
+                    gt_instance is not None and
+                    gt_occ_img_is_valid is not None
+                ):
+                outs_occ = self.occ_head.forward_test(
+                    bev_embed, 
+                    outs_motion,
+                    no_query = occ_no_query,
+                    gt_segmentation=gt_segmentation,
+                    gt_instance=gt_instance,
+                    gt_img_is_valid=gt_occ_img_is_valid,
+                )
             result[0]['occ'] = outs_occ
         
         if self.with_planning_head:
@@ -323,7 +328,13 @@ class UniAD(UniADTrack):
                 sdc_planning_mask=sdc_planning_mask,
                 command=command
             )
-            result_planning = self.planning_head.forward_test(bev_embed, outs_motion, outs_occ, command)
+            prev_use_col_optim = self.planning_head.use_col_optim
+            if outs_occ['seg_out'] is None:
+                self.planning_head.use_col_optim = False
+            try:
+                result_planning = self.planning_head.forward_test(bev_embed, outs_motion, outs_occ, command)
+            finally:
+                self.planning_head.use_col_optim = prev_use_col_optim
             result[0]['planning'] = dict(
                 planning_gt=planning_gt,
                 result_planning=result_planning,
@@ -341,7 +352,6 @@ class UniAD(UniADTrack):
                 pop_list=['seg_out_mask', 'flow_out', 'future_states_occ', 'pred_ins_masks', 'pred_raw_occ', 'pred_ins_logits', 'pred_ins_sigmoid'])
         
         for i, res in enumerate(result):
-            res['token'] = img_metas[i]['sample_idx']
             res.update(result_track[i])
             if self.with_motion_head:
                 res.update(result_motion[i])
