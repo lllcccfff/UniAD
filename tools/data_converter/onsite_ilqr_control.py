@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from metadrive.utils.ilqr import plan2control
+from streetworld.utils.ilqr import plan2control
 
 
 DEFAULT_WHEELBASE = 2.469

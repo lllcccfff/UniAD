@@ -22,8 +22,8 @@ from mmcv.parallel import MMDataParallel
 from mmcv.runner import load_checkpoint, wrap_fp16_model
 from mmdet3d.models import build_model
 
-from metadrive.misc.onsite_middleware import OnSiteSwitch, SIM_STATE, TERMINAL_TYPE
-from metadrive.misc.onsite_middleware.onsite_proto.main.proto.enums_pb2 import (
+from streetworld.misc.onsite_middleware import OnSiteSwitch, SIM_STATE, TERMINAL_TYPE
+from streetworld.misc.onsite_middleware.onsite_proto.main.proto.enums_pb2 import (
     NT_ABORT_TEST,
     NT_FINISH_TEST,
     NT_START_TEST,
@@ -126,9 +126,9 @@ def main():
     model = load_uniad_model(args.uniad_config, args.checkpoint, device)
     logging.basicConfig(level=resolved_log_level, force=True)
     logging.getLogger().setLevel(resolved_log_level)
-    logging.getLogger("metadrive").setLevel(resolved_log_level)
-    logging.getLogger("metadrive.misc.onsite_middleware").setLevel(resolved_log_level)
-    logging.getLogger("metadrive.misc.onsite_middleware.onsite_switch").setLevel(resolved_log_level)
+    logging.getLogger("streetworld").setLevel(resolved_log_level)
+    logging.getLogger("streetworld.misc.onsite_middleware").setLevel(resolved_log_level)
+    logging.getLogger("streetworld.misc.onsite_middleware.onsite_switch").setLevel(resolved_log_level)
     logger.setLevel(resolved_log_level)
     logger.debug("Driver args: %s", vars(args))
     controller = OnsiteILQRController(control_dt=ONSITE_CONTROL_DT, max_steer=ONSITE_MAX_STEER_RAD)
