@@ -28,6 +28,7 @@ from streetworld.misc.onsite_middleware.onsite_proto.main.proto.enums_pb2 import
     NT_FINISH_TEST,
     NT_START_TEST,
 )
+from streetworld.utils.logger import setup_entrypoint_logging
 from tools.data_converter.onsite_input_builder import build_uniad_input
 from tools.data_converter.onsite_ilqr_control import OnsiteILQRController
 
@@ -45,7 +46,6 @@ def process_notify(middleware, sim_state, session_id, actor_id):
         return sim_state, session_id, actor_id
 
     for notify in notifies:
-        logger.info("Received Notify: type=%s role_id=%s", notify.type, notify.role_id)
         if notify.type in (NT_ABORT_TEST, NT_FINISH_TEST):
             sim_state = SIM_STATE.IDLE
             session_id = ""
@@ -60,23 +60,22 @@ def process_notify(middleware, sim_state, session_id, actor_id):
 def wait_for_started_inputs(middleware, sim_state, session_id, actor_id, none_sleep_s):
     images = None
     vehicle_feedback = None
-
+    
+    cur_time = time.time()
     while True:
+        if time.time() - cur_time >= 5.0:
+            return SIM_STATE.IDLE, session_id, actor_id, None, None
+        
         sim_state, session_id, actor_id = process_notify(middleware, sim_state, session_id, actor_id)
         if sim_state != SIM_STATE.STARTED:
             return sim_state, session_id, actor_id, None, None
 
-        ret = None
         if vehicle_feedback is None:
             vehicle_feedback = middleware.recv_vehicle_feedback()
         if images is None:
             ret, images = middleware.recv_image()
 
-        if ret == 403:
-            middleware.send_last_vehicle_control()
-            images = None
-            vehicle_feedback = None
-        if images and vehicle_feedback:
+        if images is not None and vehicle_feedback is not None:
             return sim_state, session_id, actor_id, images, vehicle_feedback
 
 
@@ -117,20 +116,11 @@ def main():
     parser.add_argument("--checkpoint", type=str, default="UniAD/ckpts/uniad_base_e2e.pth")
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--none_sleep_s", type=float, default=0.02)
-    parser.add_argument("--log_level", type=str, default="INFO")
     args = parser.parse_args()
 
-    resolved_log_level = getattr(logging, args.log_level.upper(), logging.INFO)
 
     device = torch.device(args.device)
     model = load_uniad_model(args.uniad_config, args.checkpoint, device)
-    logging.basicConfig(level=resolved_log_level, force=True)
-    logging.getLogger().setLevel(resolved_log_level)
-    logging.getLogger("streetworld").setLevel(resolved_log_level)
-    logging.getLogger("streetworld.misc.onsite_middleware").setLevel(resolved_log_level)
-    logging.getLogger("streetworld.misc.onsite_middleware.onsite_switch").setLevel(resolved_log_level)
-    logger.setLevel(resolved_log_level)
-    logger.debug("Driver args: %s", vars(args))
     controller = OnsiteILQRController(control_dt=ONSITE_CONTROL_DT, max_steer=ONSITE_MAX_STEER_RAD)
     middleware = OnSiteSwitch(onsite_dir=args.onsite_dir, terminal_type=TERMINAL_TYPE.TESTEE)
 
@@ -169,7 +159,7 @@ def main():
 
                 data, current_speed, current_steer = build_uniad_input(images, vehicle_feedback, device, scene_name)
                 logger.info(
-                    "UniAD input summary: timestamp=%s command=%s speed=%.4f steer=%.4f",
+                    "UniAD input: timestamp=%s command=%s speed=%.4f steer=%.4f",
                     data["timestamp"],
                     data["command"],
                     current_speed,
@@ -180,7 +170,7 @@ def main():
                 plan_traj = results[0]["planning"]["result_planning"]["sdc_traj"][0].detach().cpu().numpy()
                 steering, throttle_brake = controller.act(plan_traj, current_speed=current_speed, current_steer=current_steer)
                 logger.info(
-                    "UniAD output summary: traj=%s steering=%.4f throttle_brake=%.4f",
+                    "UniAD output: traj=%s steering=%.4f throttle_brake=%.4f",
                     plan_traj,
                     steering,
                     throttle_brake,
