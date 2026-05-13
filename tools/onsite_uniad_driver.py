@@ -139,11 +139,11 @@ def main():
                 result = middleware.recv_actor_prepare()
                 if result is not None:
                     session_id, actor_id, _, scene_name = result
-                    middleware.send_actor_prepare_result(session_id=session_id, actor_id=actor_id, result=True)
                     sim_state = SIM_STATE.PREPARED
                 time.sleep(0.5)
 
             elif sim_state == SIM_STATE.PREPARED:
+                middleware.send_actor_prepare_result(session_id=session_id, actor_id=actor_id, result=True)
                 time.sleep(0.5)
 
             elif sim_state == SIM_STATE.STARTED:
