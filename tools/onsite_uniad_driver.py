@@ -119,11 +119,11 @@ def main():
     parser.add_argument("--log-level", dest="log_level", type=str, default="INFO")
     args = parser.parse_args()
 
-    log_path = setup_entrypoint_logging(args.log_level)
-    logger.info("Logs saved to %s", log_path)
 
     device = torch.device(args.device)
     model = load_uniad_model(args.uniad_config, args.checkpoint, device)
+    setup_entrypoint_logging(args.log_level,log_name="onsite_uniad_driver", log_dir=PROJECT_ROOT / "logs")
+
     controller = OnsiteILQRController(control_dt=ONSITE_CONTROL_DT, max_steer=ONSITE_MAX_STEER_RAD)
     middleware = OnSiteSwitch(onsite_dir=args.onsite_dir, terminal_type=TERMINAL_TYPE.TESTEE)
 
