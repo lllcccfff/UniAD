@@ -116,8 +116,11 @@ def main():
     parser.add_argument("--checkpoint", type=str, default="UniAD/ckpts/uniad_base_e2e.pth")
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--none_sleep_s", type=float, default=0.02)
+    parser.add_argument("--log-level", dest="log_level", type=str, default="INFO")
     args = parser.parse_args()
 
+    log_path = setup_entrypoint_logging(args.log_level)
+    logger.info("Logs saved to %s", log_path)
 
     device = torch.device(args.device)
     model = load_uniad_model(args.uniad_config, args.checkpoint, device)
