@@ -63,7 +63,7 @@ def wait_for_started_inputs(middleware, sim_state, session_id, actor_id, none_sl
     
     cur_time = time.time()
     while True:
-        if time.time() - cur_time >= 5.0:
+        if time.time() - cur_time >= 10.0:
             return SIM_STATE.IDLE, session_id, actor_id, None, None
         
         sim_state, session_id, actor_id = process_notify(middleware, sim_state, session_id, actor_id)
@@ -77,6 +77,7 @@ def wait_for_started_inputs(middleware, sim_state, session_id, actor_id, none_sl
 
         if images is not None and vehicle_feedback is not None:
             return sim_state, session_id, actor_id, images, vehicle_feedback
+        time.sleep(none_sleep_s)
 
 
 
